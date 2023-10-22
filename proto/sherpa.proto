@@ -1,0 +1,12 @@
+syntax = "proto3";
+package sherpa;
+
+import "stock.proto";
+
+
+service SherpaStreamer {
+  rpc GetStock(stock.StockRequest) returns (stream stock.StockData) {}
+  rpc GetCrypto(stock.CryptoRequest) returns (stream stock.CryptoData) {}
+  rpc GetNews(stock.NewsRequest) returns (stream stock.NewsData) {}
+}
+
