@@ -1,20 +1,18 @@
-use std::sync::atomic::AtomicBool;
+mod services;
 
+use mini_alpaca::CryptoClient;
 use mini_alpaca::Endpoint;
+use mini_alpaca::NewsClient;
 use mini_alpaca::StockClient;
-use sherpa::sherpa_streamer_server::SherpaStreamer;
-use sherpa::sherpa_streamer_server::SherpaStreamerServer;
-// use stock::StockRequest;
+use services::MyStockStreamer;
+use sherpa::stock_streamer_server::StockStreamerServer;
+use std::sync::atomic::AtomicBool;
 use tokio::sync::broadcast;
-use tokio::sync::mpsc;
-use tokio_stream::wrappers::ReceiverStream;
-use tonic::{transport::Server, Request, Response, Status};
+use tonic::transport::Server;
 
-use stock::StockData;
-use stock::StockRequest;
-
-use crate::stock::Trade;
-use crate::stock::UpdatedBar;
+use crate::services::MyCryptoStreamer;
+use crate::sherpa::crypto_streamer_server::CryptoStreamerServer;
+use crate::sherpa::news_streamer_server::NewsStreamerServer;
 
 pub mod sherpa {
     tonic::include_proto!("sherpa");
@@ -26,267 +24,152 @@ pub mod sherpa {
 pub mod stock {
     tonic::include_proto!("stock");
 }
-
-pub struct MyStockStreamer {
-    // channel: Arc<Receiver<mini_alpaca::stock::Event>>,
-    sender: broadcast::Sender<mini_alpaca::stock::Event>,
+pub mod crypto {
+    tonic::include_proto!("crypto");
+}
+pub mod news {
+    tonic::include_proto!("news");
 }
 
-#[tonic::async_trait]
-impl SherpaStreamer for MyStockStreamer {
-    type GetStockStream = ReceiverStream<Result<stock::StockData, Status>>;
+pub type Result<T> = std::result::Result<T, Error>;
+pub type Error = Box<dyn std::error::Error + Send + Sync>;
 
-    async fn get_stock(
-        &self,
-        request: Request<StockRequest>, // Accept request of type HelloRequest
-    ) -> Result<Response<Self::GetStockStream>, Status> {
-        println!("Got a request from {:?}", request.remote_addr());
-        let inner = request.into_inner();
-        let (tx, rx) = mpsc::channel(10_000);
-        let mut message_rx = self.sender.subscribe();
-        tokio::spawn(async move {
-            loop {
-                match message_rx.recv().await {
-                    Ok(message) => match message {
-                        mini_alpaca::stock::Event::Trade(event) => {
-                            if inner.trade {
-                                let trade = Trade {
-                                    id: event.id,
-                                    symbol: event.symbol,
-                                    price: event.price,
-                                    exchange_code: event.exchange_code,
-                                    size: event.size,
-                                    timestamp: event.timestamp,
-                                    condition: event.condition,
-                                    tape: event.tape,
-                                };
-                                let data = Some(stock::stock_data::Data::Trade(trade));
-                                if let Err(e) = tx.send(Ok(StockData { data })).await {
-                                    println!("error sending to client, {}", e);
-                                    break;
-                                }
-                            }
-                        }
-                        mini_alpaca::stock::Event::TradeCorrection(event) => {
-                            if inner.trade_correction {
-                                let trade_correction = crate::stock::TradeCorrection {
-                                    symbol: event.symbol,
-                                    exchange_code: event.exchange_code,
-                                    original_id: event.original_id,
-                                    original_price: event.original_price,
-                                    original_size: event.original_size,
-                                    original_conditions: event.original_conditions,
-                                    corrected_id: event.corrected_id,
-                                    corrected_price: event.corrected_price,
-                                    corrected_size: event.corrected_size,
-                                    corrected_conditions: event.corrected_conditions,
-                                    timestamp: event.timestamp,
-                                    tape: event.tape,
-                                };
-                                let data = Some(stock::stock_data::Data::TradeCorrection(
-                                    trade_correction,
-                                ));
-                                if let Err(e) = tx.send(Ok(StockData { data })).await {
-                                    println!("error sending to client, {}", e);
-                                    break;
-                                }
-                            }
-                        }
-                        mini_alpaca::stock::Event::TradeCancel(event) => {
-                            if inner.trade_cancel {
-                                let trade_cancel = crate::stock::TradeCancel {
-                                    symbol: event.symbol,
-                                    id: event.id,
-                                    exchange_code: event.exchange_code,
-                                    price: event.price,
-                                    size: event.size,
-                                    action: event.action,
-                                    timestamp: event.timestamp,
-                                    tape: event.tape,
-                                };
-                                let data = Some(stock::stock_data::Data::TradeCancel(trade_cancel));
-                                if let Err(e) = tx.send(Ok(StockData { data })).await {
-                                    println!("error sending to client, {}", e);
-                                    break;
-                                }
-                            }
-                        }
-                        mini_alpaca::stock::Event::Quote(event) => {
-                            if inner.quote {
-                                let quote = crate::stock::Quote {
-                                    symbol: event.symbol,
-                                    ask_exchange_code: event.ask_exchange_code,
-                                    ask_price: event.ask_price,
-                                    ask_size: event.ask_size,
-                                    bid_exchange_code: event.bid_exchange_code,
-                                    bid_price: event.bid_price,
-                                    bid_size: event.bid_size,
-                                    condition: event.condition,
-                                    timestamp: event.timestamp,
-                                    tape: event.tape,
-                                };
-                                let data = Some(stock::stock_data::Data::Quote(quote));
-                                if let Err(e) = tx.send(Ok(StockData { data })).await {
-                                    println!("error sending to client, {}", e);
-                                    break;
-                                }
-                            }
-                        }
-                        mini_alpaca::stock::Event::Bar(event) => {
-                            if inner.bar {
-                                let bar = crate::stock::Bar {
-                                    symbol: event.symbol,
-                                    open: event.open,
-                                    high: event.high,
-                                    low: event.low,
-                                    close: event.close,
-                                    volume: event.volume,
-                                    timestamp: event.timestamp,
-                                };
-                                let data = Some(stock::stock_data::Data::Bar(bar));
-                                if let Err(e) = tx.send(Ok(StockData { data })).await {
-                                    println!("error sending to client, {}", e);
-                                    break;
-                                }
-                            }
-                        }
-                        mini_alpaca::stock::Event::DailyBar(event) => {
-                            if inner.daily_bar {
-                                let daily_bar = crate::stock::DailyBar {
-                                    symbol: event.symbol,
-                                    open: event.open,
-                                    high: event.high,
-                                    low: event.low,
-                                    close: event.close,
-                                    volume: event.volume,
-                                    timestamp: event.timestamp,
-                                };
-                                let data = Some(stock::stock_data::Data::DailyBar(daily_bar));
-                                if let Err(e) = tx.send(Ok(StockData { data })).await {
-                                    println!("error sending to client, {}", e);
-                                    break;
-                                }
-                            }
-                        }
-                        mini_alpaca::stock::Event::UpdatedBar(event) => {
-                            if inner.updated_bar {
-                                let updated_bar = UpdatedBar {
-                                    symbol: event.symbol,
-                                    open: event.open,
-                                    high: event.high,
-                                    low: event.low,
-                                    close: event.close,
-                                    volume: event.volume,
-                                    timestamp: event.timestamp,
-                                };
-                                let data = Some(stock::stock_data::Data::UpdatedBar(updated_bar));
-                                if let Err(e) = tx.send(Ok(StockData { data })).await {
-                                    println!("error sending to client, {}", e);
-                                    break;
-                                }
-                            }
-                        }
-                        mini_alpaca::stock::Event::Status(event) => {
-                            if inner.status {
-                                let status = crate::stock::Status {
-                                    symbol: event.symbol,
-                                    status_code: event.status_code,
-                                    status_message: event.status_message,
-                                    reason_code: event.reason_code,
-                                    reason_message: event.reason_message,
-                                    timestamp: event.timestamp,
-                                    tape: event.tape,
-                                };
-                                let data = Some(stock::stock_data::Data::Status(status));
-                                if let Err(e) = tx.send(Ok(StockData { data })).await {
-                                    println!("error sending to client, {}", e);
-                                    break;
-                                }
-                            }
-                        }
-                        mini_alpaca::stock::Event::Lulds(event) => {
-                            if inner.luld {
-                                let luld = crate::stock::Luld {
-                                    symbol: event.symbol,
-                                    limit_up: event.limit_up,
-                                    limit_down: event.limit_down,
-                                    indicator: event.indicator,
-                                    timestamp: event.timestamp,
-                                    tape: event.tape,
-                                };
-                                let data = Some(stock::stock_data::Data::Luld(luld));
-                                if let Err(e) = tx.send(Ok(StockData { data })).await {
-                                    println!("error sending to client, {}", e);
-                                    break;
-                                }
-                            }
-                        }
-                        _ => {}
-                    },
-                    Err(e) => {
-                        eprint!("problems bro {e}");
-                        break;
-                    }
-                }
-            }
-            println!("end of loop");
-        });
+async fn stock_handler(sender: broadcast::Sender<mini_alpaca::stock::Event>) -> Result<()> {
+    let handler = |event| {
+        sender
+            .send(event)
+            .expect("error when sending event to channel receiver");
+        Ok(())
+    };
+    let mut stock_client = StockClient::new(Endpoint::StocksProductionSip, handler).await?;
 
-        Ok(Response::new(ReceiverStream::new(rx)))
-    }
+    stock_client
+        .subscribe(mini_alpaca::stock::Subscribe {
+            trades: Some(vec!["*".into()]),
+            quotes: Some(vec!["*".into()]),
+            bars: Some(vec!["*".into()]),
+            daily_bars: Some(vec!["*".into()]),
+            updated_bars: Some(vec!["*".into()]),
+            statuses: Some(vec!["*".into()]),
+            lulds: Some(vec!["*".into()]),
+            // ..Default::default()
+        })
+        .await?;
+
+    //FIXME: cannot toggle run from the outside
+    let run = AtomicBool::new(true);
+    println!("running stock event loop");
+    stock_client.event_loop(&run).await?;
+    println!("exiting stock event loop");
+    Ok(())
+}
+
+async fn crypto_handler(sender: broadcast::Sender<mini_alpaca::crypto::Event>) -> Result<()> {
+    let handler = |event| {
+        sender
+            .send(event)
+            .expect("error when sending event to channel receiver");
+        Ok(())
+    };
+    let mut crypto_client = CryptoClient::new(Endpoint::Crypto, handler).await?;
+
+    crypto_client
+        .subscribe(mini_alpaca::crypto::Subscribe {
+            trades: Some(vec!["*".into()]),
+            quotes: Some(vec!["*".into()]),
+            bars: Some(vec!["*".into()]),
+            updated_bars: Some(vec!["*".into()]),
+            dailly_bars: Some(vec!["*".into()]),
+            order_books: Some(vec!["*".into()]),
+            // ..Default::default()
+        })
+        .await?;
+
+    //FIXME: cannot toggle run from the outside
+    let run = AtomicBool::new(true);
+    println!("running crypto event loop");
+    crypto_client.event_loop(&run).await?;
+    Ok(())
+}
+
+async fn news_handler(sender: broadcast::Sender<mini_alpaca::news::Event>) -> Result<()> {
+    let handler = |event| {
+        sender
+            .send(event)
+            .expect("error when sending event to channel receiver");
+        Ok(())
+    };
+    let mut news_client = NewsClient::new(Endpoint::News, handler).await?;
+
+    news_client
+        .subscribe(mini_alpaca::news::Subscribe {
+            news: Some(vec!["*".into()]),
+            // ..Default::default()
+        })
+        .await?;
+
+    //FIXME: cannot toggle run from the outside
+    let run = AtomicBool::new(true);
+    println!("running news event loop");
+    news_client.event_loop(&run).await?;
+    Ok(())
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let (sender, _receiver) = broadcast::channel::<mini_alpaca::stock::Event>(1_000);
-    let run = AtomicBool::new(true);
+async fn main() -> Result<()> {
+    // broadcast channels.  the receiving end needs to stay open and not thrown away with a _
+    let (stock_sender, _stock) = broadcast::channel::<mini_alpaca::stock::Event>(10_000);
+    let (crypto_sender, _crypto) = broadcast::channel::<mini_alpaca::crypto::Event>(10_000);
+    let (news_sender, _news) = broadcast::channel::<mini_alpaca::news::Event>(10_000);
 
-    let sender2 = sender.clone();
-    // start a thread that connects to alpaca and starts getting data
+    // clones of the senders, which make receivers when you .subscribe() to them
+    let stock_sender_clone = stock_sender.clone();
+    let crypto_sender_clone = crypto_sender.clone();
+    let news_sender_clone = news_sender.clone();
+
+    // handlers
     tokio::spawn(async move {
-        let handler = |event| {
-            sender2.send(event).unwrap();
-            Ok(())
-        };
-        // FIXME: unwrap fails
-        let mut stock_client = StockClient::new(Endpoint::StocksProductionSip, handler)
-            .await
-            .unwrap();
-
-        stock_client
-            .subscribe(mini_alpaca::stock::Subscribe {
-                // trades: Some(vec!["*".into()]),
-                // quotes: Some(vec!["*".into()]),
-                // bars: Some(vec!["*".into()]),
-                // daily_bars: Some(vec!["*".into()]),
-                // updated_bars: Some(vec!["*".into()]),
-                statuses: Some(vec!["*".into()]),
-                // lulds: Some(vec!["*".into()]),
-                ..Default::default()
-            })
-            .await
-            .unwrap();
-
-        stock_client.event_loop(&run).await.unwrap();
+        if let Err(e) = stock_handler(stock_sender_clone).await {
+            eprintln!("Error in stock handler: {}", e);
+        }
     });
-
-    let addr = "[::1]:10000".parse().unwrap();
+    tokio::spawn(async move {
+        if let Err(e) = crypto_handler(crypto_sender_clone).await {
+            eprintln!("Error in crypto handler: {}", e);
+        }
+    });
+    tokio::spawn(async move {
+        if let Err(e) = news_handler(news_sender_clone).await {
+            eprintln!("Error in news handler: {}", e);
+        }
+    });
 
     let reflector = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(sherpa::FILE_DESCRIPTOR_SET)
         .build()
         .unwrap();
 
-    let streamer = MyStockStreamer { sender };
-    let svc = SherpaStreamerServer::new(streamer);
+    // services
+    let blah = MyStockStreamer {
+        sender: stock_sender,
+    };
+    let stock_service = StockStreamerServer::new(blah);
+    let crypto_service = CryptoStreamerServer::new(MyCryptoStreamer {
+        sender: crypto_sender,
+    });
+    let news_service = NewsStreamerServer::new(services::MyNewsStreamer {
+        sender: news_sender,
+    });
 
+    let addr = "[::1]:10000".parse().unwrap();
     println!("sherpa listening on: {}", addr);
 
     Server::builder()
-        .add_service(svc)
+        .add_service(stock_service)
+        .add_service(crypto_service)
+        .add_service(news_service)
         .add_service(reflector)
         .serve(addr)
         .await?;
-
     Ok(())
 }

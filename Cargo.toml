@@ -22,6 +22,14 @@ tonic-build = "0.10"
 name = "server"
 path = "src/server.rs"
 
-[[bin]]
-name = "client"
-path = "src/client.rs"
+[[example]]
+name = "stocks"
+path = "src/examples/stock.rs"
+
+[[example]]
+name = "crypto"
+path = "src/examples/crypto.rs"
+
+[[example]]
+name = "news"
+path = "src/examples/news.rs"
