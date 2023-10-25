@@ -1,4 +1,5 @@
 FROM rust:latest as builder
+LABEL org.opencontainers.image.source="https://github.com/jaredmcqueen/mini-grpc"
 
 # install protobuf
 RUN apt-get update && apt-get install -y protobuf-compiler libprotobuf-dev && rm -rf /var/lib/apt/lists/*
