@@ -161,7 +161,7 @@ async fn main() -> Result<()> {
         sender: news_sender,
     });
 
-    let addr = "[::1]:10000".parse().unwrap();
+    let addr = "0.0.0.0:10000".parse().unwrap();
     println!("sherpa listening on: {}", addr);
 
     Server::builder()
