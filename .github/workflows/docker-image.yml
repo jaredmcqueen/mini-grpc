@@ -13,6 +13,6 @@ jobs:
       - name: Login to GitHub Container Registry
         run: echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Build Docker image
-        run: docker build -t ghcr.io/${{ github.actor }}:${{ github.ref_name }} --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" --label "org.opencontainers.image.description=mini-grpc data shipper" .
+        run: docker build -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" --label "org.opencontainers.image.description=mini-grpc data shipper" .
       - name: Push Docker image to GitHub Container Registry
-        run: docker push ghcr.io/${{ github.actor }}:${{ github.ref_name }}
+        run: docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
