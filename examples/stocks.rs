@@ -21,7 +21,7 @@ pub mod news {
 async fn connect_and_stream() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("starting gRPC client");
 
-    let mut client = StockStreamerClient::connect("http://[::1]:10000").await?;
+    let mut client = StockStreamerClient::connect("http://localhost:10000").await?;
     let mut stream = client
         .get_stock(Request::new(StockRequest {
             trade: true,
