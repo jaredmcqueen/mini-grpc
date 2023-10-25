@@ -3,33 +3,33 @@ name = "sherpa"
 version = "0.1.0"
 edition = "2021"
 
+
 [dependencies]
 async-stream = { version = "0.3" }
 prost = "0.12"
-rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1" }
 tonic = "0.10"
 tonic-reflection = "0.10"
-mini-alpaca = { path = "../mini-alpaca" }
+mini-alpaca = { git = "https://github.com/jaredmcqueen/mini-alpaca.git" }
 
 [build-dependencies]
 tonic-build = "0.10"
 
 [[bin]]
 name = "server"
-path = "src/server.rs"
+path = "./src/server.rs"
 
 [[example]]
 name = "stocks"
-path = "src/examples/stock.rs"
+path = "./src/examples/stock.rs"
 
 [[example]]
 name = "crypto"
-path = "src/examples/crypto.rs"
+path = "./src/examples/crypto.rs"
 
 [[example]]
 name = "news"
-path = "src/examples/news.rs"
+path = "./src/examples/news.rs"

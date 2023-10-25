@@ -580,6 +580,7 @@ checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 [[package]]
 name = "mini-alpaca"
 version = "0.1.0"
+source = "git+https://github.com/jaredmcqueen/mini-alpaca.git#830bc61840852ad801266fb2eca5e72a916cae7d"
 dependencies = [
  "futures-util",
  "serde",
@@ -1010,7 +1011,6 @@ dependencies = [
  "async-stream",
  "mini-alpaca",
  "prost",
- "rand",
  "serde",
  "serde_json",
  "tokio",
