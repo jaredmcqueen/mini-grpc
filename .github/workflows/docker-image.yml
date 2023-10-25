@@ -17,5 +17,6 @@ jobs:
           docker build -t ghcr.io/${{ github.actor }}:${{ github.ref_name }} \
           --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
           --label "org.opencontainers.image.description=mini-grpc data shipper" \
+          .
       - name: Push Docker image to GitHub Container Registry
         run: docker push ghcr.io/${{ github.actor }}:${{ github.ref_name }}
