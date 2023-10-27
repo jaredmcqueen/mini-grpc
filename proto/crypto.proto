@@ -25,7 +25,7 @@ message Trade {
   string symbol = 1;
   double price = 2;
   double size = 3;
-  string timestamp = 4;
+  uint64 timestamp = 4;
   uint64 id =5;
   string taker_side = 6;
 }
@@ -37,7 +37,7 @@ message Book {
 
 message OrderBook {
   string symbol =1;
-  string timestamp =2;
+  uint64 timestamp =2;
   repeated Book bid = 3;
   repeated Book ask = 4;
   bool reset = 5;
@@ -49,7 +49,7 @@ message Quote {
   double bid_size = 3;
   double ask_price = 4;
   double ask_size = 5;
-  string timestamp = 6;
+  uint64 timestamp = 6;
 }
 
 message Bar {
@@ -59,7 +59,7 @@ message Bar {
   double low = 4;
   double close = 5;
   double volume = 6;
-  string timestamp = 7;
+  uint64 timestamp = 7;
   uint64 num_trades = 8;
   double volume_weigth = 9;
 }
@@ -71,7 +71,7 @@ message DailyBar {
   double low = 4;
   double close = 5;
   double volume = 6;
-  string timestamp = 7;
+  uint64 timestamp = 7;
   uint64 num_trades = 8;
   double volume_weigth = 9;
 }
@@ -83,7 +83,7 @@ message UpdatedBar {
   double low = 4;
   double close = 5;
   double volume = 6;
-  string timestamp = 7;
+  uint64 timestamp = 7;
   uint64 num_trades = 8;
   double volume_weigth = 9;
 }

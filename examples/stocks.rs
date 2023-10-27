@@ -41,11 +41,11 @@ async fn connect_and_stream() -> Result<(), Box<dyn std::error::Error + Send + S
     let start_time = Instant::now();
     while let Some(tick) = stream.message().await? {
         counter += 1;
-        // println!("{:?}", tick);
+        println!("{:?}", tick);
         _ = tick;
-        if counter % 10_000 == 0 {
-            println!("   got {counter}");
-        }
+        // if counter % 10_000 == 0 {
+        //     println!("   got {counter}");
+        // }
     }
 
     let end_time = Instant::now();

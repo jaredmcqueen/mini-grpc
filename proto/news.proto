@@ -10,8 +10,8 @@ message News {
   string headline = 2;
   string summary = 3;
   string author = 4;
-  string created = 5;
-  string updated = 6;
+  uint64 created = 5;
+  uint64 updated = 6;
   string url = 7;
   string content = 8;
   repeated string symbols = 9;

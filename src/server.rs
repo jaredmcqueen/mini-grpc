@@ -164,6 +164,7 @@ async fn main() -> Result<()> {
     let addr = "0.0.0.0:10000".parse().unwrap();
     println!("sherpa listening on: {}", addr);
 
+    //FIXME: make these services command-line driven
     Server::builder()
         .add_service(stock_service)
         .add_service(crypto_service)
