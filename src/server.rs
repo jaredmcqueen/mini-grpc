@@ -129,11 +129,18 @@ async fn main() -> Result<()> {
 
     // handlers
     tokio::spawn(async move {
+        let mut retry_counter = 0;
         loop {
+            if retry_counter == 5 {
+                eprintln!("stopping stock handler due to too many websocket failures");
+                //TODO: send a message on an error stream to shut the whole thing down gracefully.
+                break;
+            }
             let my_clone = stock_sender_clone.clone();
             if let Err(e) = stock_handler(my_clone).await {
                 eprintln!("Error in stock handler.  Restarting handler {}", e);
             }
+            retry_counter += 1;
         }
     });
     // tokio::spawn(async move {
